@@ -19,6 +19,8 @@ Add to path:
 
 `%USERPROFILE%\AppData\Local\Android\Sdk\platform-tools`
 
+Create `local.properties` file in android-camera-motion-detector root
+
 Add sdk.dir to local.properties:
 
 `sdk.dir=C\:\\Users\\<user>\\AppData\\Local\\Android\\Sdk`
@@ -32,6 +34,8 @@ Install "NDK (Native Development Kit)" in Android Studio SDK Tools
 Add to path:
 
 `%USERPROFILE%\AppData\Local\Android\Sdk\ndk\<version>`
+
+Create `local.properties` file in android-camera-motion-detector root
 
 Add ndk.dir to local.properties:
 

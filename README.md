@@ -21,7 +21,7 @@ Add to path:
 
 Create `local.properties` file in android-camera-motion-detector root
 
-Add sdk.dir to local.properties:
+Add sdk.dir to local.properties: 
 
 `sdk.dir=C\:\\Users\\<user>\\AppData\\Local\\Android\\Sdk`
 
@@ -75,11 +75,11 @@ Extract opencv-4.4.0-android-sdk.zip to C:\
 
 `gradle assembleDebug`
 
-Install to Android device
+Install to Android device:
 
 `adb install app/build/outputs/apk/debug/app-debug.apk`
 
-app-debug.apk size: 26 MB
+app-debug.apk size: ~28 MB
 
 ---
 
@@ -93,8 +93,8 @@ app-debug.apk size: 26 MB
 
 `gradle assemble`
 
-Install to Android device
+Install to Android device:
 
 `adb install app/build/outputs/apk/debug/app-release-unsigned.apk`
 
-app-release-unsigned.apk size: 21 MB
+app-release-unsigned.apk size: ~21 MB

@@ -1,6 +1,9 @@
 # Android camera motion detector
 
 
+<img src="https://github.com/git-job-organization-123/android-camera-motion-detector/blob/main/motion-123.png" width="800" />
+
+
 ## Install on Windows
 
 

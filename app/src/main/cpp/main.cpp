@@ -213,65 +213,39 @@ void setupGraphics(int width, int height) {
   glUniform1i(gutTextureHandle, 0);
 }
 
-struct RedSquare {
-  float x;
-  float y;
-  float width;
-  float height;
-
-  RedSquare(float x_, float y_, float width_, float height_) {
-    x = x_;
-    y = y_;
-    width = width_;
-    height = height_;
-  }
-};
-
-// Motion red lines
-void getRedSquares(std::vector<RedSquare>* redSquares) {
-  size_t numSquares = keypoints.size();
-
-  for (size_t i = 0; i < numSquares; i++) {
-    float x = keypoints[i].pt.x;
-    float y = keypoints[i].pt.y;
-    redSquares->push_back(RedSquare(x, y, 0.01f, 0.01f));
-  }
-}
-
-std::vector<GLfloat> vboData;
-std::vector<GLushort> iboData;
+std::vector<GLfloat> vboVector;
 
 void drawSmallRedLines() {
-  std::vector<RedSquare> redSquares;
-  getRedSquares(&redSquares);
-  
-  size_t numSquares = redSquares.size();
-  size_t vboSize = numSquares * 4 * 3 * sizeof(GLfloat);
+  size_t numSquares = keypoints.size();
+  size_t vboSize = numSquares * 12 * sizeof(GLfloat);
 
-  vboData.resize(vboSize / sizeof(GLfloat));
+  vboVector.resize(vboSize / sizeof(GLfloat));
 
   float width = 0.01f;
   float height = 0.01f;
 
   int i = 0;
-  for (auto redSquare : redSquares) {
-    float x = -(redSquare.y / cameraHeight - 0.5f) * 2.0f;
-    float y = -(redSquare.x / cameraWidth - 0.5f) * 2.0f;
 
-    size_t squareIndex = i * 4;
-    for (size_t j = 0; j < 4; j++) {
-      size_t vboIndex = (squareIndex + j) * 3;
-      vboData[vboIndex + 0] = width * gSquareVertices[j * 3 + 0] + x;
-      vboData[vboIndex + 1] = height * gSquareVertices[j * 3 + 1] + y;
-      vboData[vboIndex + 2] = 0.0f;
-    }
+  std::for_each(keypoints.begin(), keypoints.end(), [width, height, i](cv::KeyPoint keypoint) mutable {
+    float x = -(keypoint.pt.y / cameraHeight - 0.5f) * 2.0f;
+    float y = -(keypoint.pt.x / cameraWidth - 0.5f) * 2.0f;
 
-    i++;
-  }
+    const GLfloat vboValues[] = {
+      width * gSquareVertices[0] + x, height * gSquareVertices[1] + y, 0.0f,
+      width * gSquareVertices[3] + x, height * gSquareVertices[4] + y, 0.0f,
+      width * gSquareVertices[6] + x, height * gSquareVertices[7] + y, 0.0f,
+      width * gSquareVertices[9] + x, height * gSquareVertices[10] + y, 0.0f,
+    };
+
+    const uint32_t vboIndex = i * 12;
+    memcpy(&vboVector[vboIndex], vboValues, sizeof(vboValues));
+
+    ++i;
+  });
 
   // VBO
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, vboSize, vboData.data(), GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, vboSize, vboVector.data(), GL_DYNAMIC_DRAW);
 
   // Set up the vertex attribute pointers
   glVertexAttribPointer(gvPositionHandle, 3, GL_FLOAT, GL_FALSE, 0, 0);

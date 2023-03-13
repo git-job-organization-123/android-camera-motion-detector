@@ -216,30 +216,32 @@ void setupGraphics(int width, int height) {
 GLfloat *vboData = (GLfloat*)malloc(10000000 * sizeof(GLfloat));
 
 void drawSmallRedLines() {
-  size_t numSquares = keypoints.size();
-  size_t vboSize = numSquares * 12 * sizeof(GLfloat);
-
   float width = 0.01f;
   float height = 0.01f;
 
   int i = 0;
 
-  std::for_each(keypoints.begin(), keypoints.end(), [width, height, i](cv::KeyPoint keypoint) mutable {
-    float x = -(keypoint.pt.y / cameraHeight - 0.5f) * 2.0f;
-    float y = -(keypoint.pt.x / cameraWidth - 0.5f) * 2.0f;
+  for (const auto& contour : contours) {
+    for (const auto& point : contour) {
+      float x = -(point.y / (cameraHeight * 0.5f)) + 1.0f;
+      float y = -(point.x / (cameraWidth * 0.5f)) + 1.0f;
 
-    const GLfloat vboValues[] = {
-      width * gSquareVertices[0] + x, height * gSquareVertices[1] + y, 0.0f,
-      width * gSquareVertices[3] + x, height * gSquareVertices[4] + y, 0.0f,
-      width * gSquareVertices[6] + x, height * gSquareVertices[7] + y, 0.0f,
-      width * gSquareVertices[9] + x, height * gSquareVertices[10] + y, 0.0f,
-    };
+      const GLfloat vboValues[] = {
+        width * gSquareVertices[0] + x, height * gSquareVertices[1] + y, 0.0f,
+        width * gSquareVertices[3] + x, height * gSquareVertices[4] + y, 0.0f,
+        width * gSquareVertices[6] + x, height * gSquareVertices[7] + y, 0.0f,
+        width * gSquareVertices[9] + x, height * gSquareVertices[10] + y, 0.0f,
+      };
 
-    const uint32_t vboIndex = i * 12;
-    memcpy(&vboData[vboIndex], vboValues, 48);
+      const uint32_t vboIndex = i * 12;
+      memcpy(&vboData[vboIndex], vboValues, 48);
 
-    ++i;
-  });
+      ++i;
+    }
+  }
+
+  size_t numSquares = i;
+  size_t vboSize = numSquares * 48;
 
   // VBO
   glBindBuffer(GL_ARRAY_BUFFER, vbo);

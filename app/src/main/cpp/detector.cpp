@@ -13,8 +13,8 @@ cv::Mat processedImage;
 // Fast feature detector
 cv::Ptr<cv::Feature2D> featureDetector;
 
-// Detected points or motion points (red squares)
-std::vector<cv::KeyPoint> keypoints;
+// Motion points (red lines)
+std::vector<std::vector<cv::Point>> contours;
 
 void dilate(cv::Mat* image, int x, int y) {
   cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5,5));
@@ -87,21 +87,9 @@ void detectMotion(cv::Mat* motionImage = nullptr) {
     
     *motionImage = diff;
   }
-  else { // Get motion keypoints
+  else { // Get motion points
     // Find contours in the difference image
-    std::vector<std::vector<cv::Point>> contours;
     cv::findContours(diff, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-    keypoints.clear();
-
-    // Add the motion vectors to the motion list
-    for (int i = 0; i < contours.size(); i++) {
-      for (int j = 0; j < contours[i].size(); j++) {
-        cv::Point2f point = cv::Point2f(contours[i][j].x, contours[i][j].y);
-        cv::KeyPoint motionKeyPoint(point, 1.0f, 0.0f, 0.0f, 0, -1);
-        keypoints.push_back(motionKeyPoint);
-      }
-    }
   }
 
   // Update the previous frame

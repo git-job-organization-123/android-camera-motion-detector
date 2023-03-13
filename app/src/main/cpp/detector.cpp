@@ -16,12 +16,13 @@ cv::Ptr<cv::Feature2D> featureDetector;
 // Motion points (red lines)
 std::vector<std::vector<cv::Point>> contours;
 
-void dilate(cv::Mat* image, int x, int y) {
+void dilate(cv::Mat &image, int x, int y) {
   cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5,5));
-  cv::dilate(*image, *image, kernel);
+  cv::dilate(image, image, kernel);
 }
 
-void detectMotion(cv::Mat* motionImage = nullptr) {
+// Get motion image as Mat
+void detectMotion(cv::Mat &motionImage) {
   static cv::Mat prevGrayImage;
 
   // Check if the previous frame is invalid
@@ -44,9 +45,9 @@ void detectMotion(cv::Mat* motionImage = nullptr) {
   // Compute the absolute difference between frames
   cv::absdiff(frame2, frame1, diff);
                              
-  if (motionImage != nullptr && (previewMode == PreviewMode::DETECT_PREVIEW_MOTION_RED
-                             ||  previewMode == PreviewMode::DETECT_PREVIEW_MOTION_GREEN
-                             ||  previewMode == PreviewMode::DETECT_PREVIEW_MOTION_BLUE)) {
+  if (previewMode == PreviewMode::DETECT_PREVIEW_MOTION_RED
+   || previewMode == PreviewMode::DETECT_PREVIEW_MOTION_GREEN
+   || previewMode == PreviewMode::DETECT_PREVIEW_MOTION_BLUE) {
     cv::Mat coloredDiff;
     cv::cvtColor(diff, coloredDiff, COLOR_GRAY2BGR);
     std::vector<cv::Mat> channels;
@@ -68,29 +69,59 @@ void detectMotion(cv::Mat* motionImage = nullptr) {
   }
 
   if (previewMode != PreviewMode::DETECT_PREVIEW_MOTION_WHITE) {
+    // Motion threshold  
     cv::threshold(diff, diff, 50, 255, THRESH_BINARY);
   }
 
-  if (motionImage != nullptr) { // Get motion image as Mat
-    if (previewMode == PreviewMode::DETECT_PREVIEW_MOTION_GRAYSCALE) {
-      // Make edges thicker
-      dilate(&diff, 50, 50);
+  if (previewMode == PreviewMode::DETECT_PREVIEW_MOTION_GRAYSCALE) {
+    // Make edges thicker
+    dilate(diff, 50, 50);
 
-      grayImage.copyTo(diff, diff); // Grayscale motion image
-    }
-    else if (previewMode == DETECT_PREVIEW_MOTION_WHITE_WITH_BACKGROUND) {
-      cv::cvtColor(diff, diff, cv::COLOR_BGR2RGB);
+    grayImage.copyTo(diff, diff); // Grayscale motion image
+  }
+  else if (previewMode == DETECT_PREVIEW_MOTION_WHITE_WITH_BACKGROUND) {
+    cv::cvtColor(diff, diff, cv::COLOR_BGR2RGB);
 
-      // Copy motion to preview image
-      cv::addWeighted(diff, 0.5, grayImage, 0.5, 0, diff);
-    }
-    
-    *motionImage = diff;
+    // Copy motion to preview image
+    cv::addWeighted(diff, 0.5, grayImage, 0.5, 0, diff);
   }
-  else { // Get motion points
-    // Find contours in the difference image
-    cv::findContours(diff, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+  
+  // Update motion image
+  motionImage = diff;
+
+  // Update the previous frame
+  prevGrayImage = grayImage;
+}
+
+// Get motion points (red lines)
+void detectMotionContours() {
+  static cv::Mat prevGrayImage;
+
+  // Check if the previous frame is invalid
+  if (prevGrayImage.empty()) {
+    // Initialize the previous frame and points
+    prevGrayImage = grayImage;
+    return;
   }
+
+  // Declare two frames
+  Mat frame1, frame2;
+
+  // Convert frames to grayscale
+  cv::cvtColor(grayImage, frame1, COLOR_BGR2GRAY);
+  cv::cvtColor(prevGrayImage, frame2, COLOR_BGR2GRAY);
+
+  // Declare the difference image
+  cv::Mat diff;
+
+  // Compute the absolute difference between frames
+  cv::absdiff(frame2, frame1, diff);
+
+  // Motion threshold  
+  cv::threshold(diff, diff, 50, 255, THRESH_BINARY);
+
+  // Find contours in the difference image
+  cv::findContours(diff, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
   // Update the previous frame
   prevGrayImage = grayImage;
@@ -98,7 +129,7 @@ void detectMotion(cv::Mat* motionImage = nullptr) {
 
 void detect() {
   if (previewMode == PreviewMode::DETECT_MOTION_LINES) { // Motion red lines
-    detectMotion();
+    detectMotionContours();
   }
   else if (previewMode == PreviewMode::DETECT_PREVIEW_MOTION_WHITE
         || previewMode == PreviewMode::DETECT_PREVIEW_MOTION_RED
@@ -106,7 +137,7 @@ void detect() {
         || previewMode == PreviewMode::DETECT_PREVIEW_MOTION_BLUE
         || previewMode == PreviewMode::DETECT_PREVIEW_MOTION_GRAYSCALE
         || previewMode == PreviewMode::DETECT_PREVIEW_MOTION_WHITE_WITH_BACKGROUND) { // Preview motion
-    detectMotion(&processedImage);
+    detectMotion(processedImage);
     cv::cvtColor(processedImage, processedImage, cv::COLOR_BGR2RGB);
   }
 }

@@ -213,13 +213,11 @@ void setupGraphics(int width, int height) {
   glUniform1i(gutTextureHandle, 0);
 }
 
-std::vector<GLfloat> vboVector;
+GLfloat *vboData = (GLfloat*)malloc(10000000 * sizeof(GLfloat));
 
 void drawSmallRedLines() {
   size_t numSquares = keypoints.size();
   size_t vboSize = numSquares * 12 * sizeof(GLfloat);
-
-  vboVector.resize(vboSize / sizeof(GLfloat));
 
   float width = 0.01f;
   float height = 0.01f;
@@ -238,14 +236,14 @@ void drawSmallRedLines() {
     };
 
     const uint32_t vboIndex = i * 12;
-    memcpy(&vboVector[vboIndex], vboValues, sizeof(vboValues));
+    memcpy(&vboData[vboIndex], vboValues, 48);
 
     ++i;
   });
 
   // VBO
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, vboSize, vboVector.data(), GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, vboSize, vboData, GL_DYNAMIC_DRAW);
 
   // Set up the vertex attribute pointers
   glVertexAttribPointer(gvPositionHandle, 3, GL_FLOAT, GL_FALSE, 0, 0);

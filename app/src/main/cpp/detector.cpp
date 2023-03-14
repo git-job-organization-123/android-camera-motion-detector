@@ -17,7 +17,7 @@ cv::Ptr<cv::Feature2D> featureDetector;
 std::vector<std::vector<cv::Point>> contours;
 
 void dilate(cv::Mat &image, int x, int y) {
-  cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5,5));
+  cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(x, y));
   cv::dilate(image, image, kernel);
 }
 
@@ -75,7 +75,7 @@ void detectMotion(cv::Mat &motionImage) {
 
   if (previewMode == PreviewMode::DETECT_PREVIEW_MOTION_GRAYSCALE) {
     // Make edges thicker
-    dilate(diff, 50, 50);
+    dilate(diff, 5, 5);
 
     grayImage.copyTo(diff, diff); // Grayscale motion image
   }

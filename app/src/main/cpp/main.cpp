@@ -151,18 +151,18 @@ GLuint createProgram(const char *vertexSource, const char *fragmentSource) {
 
 // Red square
 GLfloat gSquareVertices[] = {
-  0.5f, 0.5f, -0.5f, // top right
-  0.5f, -0.5f, -0.5f, // bottom right
-  -0.5f, -0.5f, -0.5f, // bottom left
-  -0.5f, 0.5f, -0.5f, // top left
+   0.5f,  0.5f, // top right
+   0.5f, -0.5f, // bottom right
+  -0.5f, -0.5f, // bottom left
+  -0.5f,  0.5f, // top left
 };
 
 // Texture
 GLfloat gTextureVertices[] = {
-  1.0f, 1.0f, -0.5f, 0.0f, 0.0f,  // top right
-  1.0f, -1.0f, -0.5f, 1.0f, 0.0f,  // bottom right
-  -1.0f, -1.0f, -0.5f, 1.0f, 1.0f,  // bottom left
-  -1.0f, 1.0f, -0.5f, 0.0f, 1.0f,  // top left
+   1.0f,  1.0f, 0.0f, 0.0f,  // top right
+   1.0f, -1.0f, 1.0f, 0.0f,  // bottom right
+  -1.0f, -1.0f, 1.0f, 1.0f,  // bottom left
+  -1.0f,  1.0f, 0.0f, 1.0f,  // top left
 };
 
 const GLushort gIndices[] = {
@@ -198,7 +198,7 @@ void setupGraphics(int width, int height) {
   glViewport(0, 0, width, height);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-  glVertexAttribPointer(gvtTexCoordHandle, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), gTextureVertices + 3);
+  glVertexAttribPointer(gvtTexCoordHandle, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), gTextureVertices + 2);
   glEnableVertexAttribArray(gvtTexCoordHandle);
 
   glActiveTexture(GL_TEXTURE0);
@@ -227,39 +227,42 @@ void drawSmallRedLines() {
       float y = -(point.x / (cameraWidth * 0.5f)) + 1.0f;
 
       const GLfloat vboValues[] = {
-        width * gSquareVertices[0] + x, height * gSquareVertices[1] + y, 0.0f,
-        width * gSquareVertices[3] + x, height * gSquareVertices[4] + y, 0.0f,
-        width * gSquareVertices[6] + x, height * gSquareVertices[7] + y, 0.0f,
-        width * gSquareVertices[9] + x, height * gSquareVertices[10] + y, 0.0f,
+        width * gSquareVertices[0] + x, height * gSquareVertices[1] + y,
+        width * gSquareVertices[2] + x, height * gSquareVertices[3] + y,
+        width * gSquareVertices[4] + x, height * gSquareVertices[5] + y,
+        width * gSquareVertices[6] + x, height * gSquareVertices[9] + y,
       };
 
-      const uint32_t vboIndex = i * 12;
-      memcpy(&vboData[vboIndex], vboValues, 48);
+      const uint32_t vboIndex = i * 8;
+      memcpy(&vboData[vboIndex], vboValues, 32);
 
       ++i;
     }
   }
 
   size_t numSquares = i;
-  size_t vboSize = numSquares * 48;
+  size_t vboSize = numSquares * 32;
 
   // VBO
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER, vboSize, vboData, GL_DYNAMIC_DRAW);
 
   // Set up the vertex attribute pointers
-  glVertexAttribPointer(gvPositionHandle, 3, GL_FLOAT, GL_FALSE, 0, 0);
+  glVertexAttribPointer(gvPositionHandle, 2, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(gvPositionHandle);
 
   glClear(GL_COLOR_BUFFER_BIT);
 
   // Draw the lines
-  glDrawArrays(GL_TRIANGLES, 0, numSquares * 4);
+  glDrawArrays(GL_TRIANGLES, 0, numSquares * 6);
 
   glDisableVertexAttribArray(gvPositionHandle);
 
   glDeleteBuffers(1, &vbo);
 }
+
+const size_t textureVerticesSize = 4 * sizeof(GLfloat);
+const size_t iboSize = 6 * sizeof(GLushort);
 
 void drawTexture(unsigned char* imageData, int width, int height) {
   if (imageData == nullptr) {
@@ -267,9 +270,9 @@ void drawTexture(unsigned char* imageData, int width, int height) {
   }
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(gIndices), gIndices, GL_STATIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, iboSize, gIndices, GL_STATIC_DRAW);
 
-  glVertexAttribPointer(gvtPositionHandle, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), gTextureVertices);
+  glVertexAttribPointer(gvtPositionHandle, 2, GL_FLOAT, GL_FALSE, textureVerticesSize, gTextureVertices);
   glEnableVertexAttribArray(gvtPositionHandle);
 
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);

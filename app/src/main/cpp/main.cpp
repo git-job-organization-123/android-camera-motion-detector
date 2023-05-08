@@ -149,12 +149,15 @@ GLuint createProgram(const char *vertexSource, const char *fragmentSource) {
   return program;
 }
 
-// Red square
+float squareWidth = 0.01f;
+float squareHeight = 0.01f;
+
+// Square
 GLfloat gSquareVertices[] = {
-   0.5f,  0.5f, // top right
-   0.5f, -0.5f, // bottom right
-  -0.5f, -0.5f, // bottom left
-  -0.5f,  0.5f, // top left
+   0.5f * squareWidth,  0.5f * squareHeight, // top right
+   0.5f * squareWidth, -0.5f * squareHeight, // bottom right
+  -0.5f * squareWidth, -0.5f * squareHeight, // bottom left
+  -0.5f * squareWidth,  0.5f * squareHeight  // top left
 };
 
 // Texture
@@ -216,9 +219,6 @@ void setupGraphics(int width, int height) {
 GLfloat *vboData = (GLfloat*)malloc(10000000 * sizeof(GLfloat));
 
 void drawSmallRedLines() {
-  float width = 0.01f;
-  float height = 0.01f;
-
   int i = 0;
 
   for (const auto& contour : contours) {
@@ -226,15 +226,15 @@ void drawSmallRedLines() {
       float x = -(point.y / (cameraHeight * 0.5f)) + 1.0f;
       float y = -(point.x / (cameraWidth * 0.5f)) + 1.0f;
 
-      const GLfloat vboValues[] = {
-        width * gSquareVertices[0] + x, height * gSquareVertices[1] + y,
-        width * gSquareVertices[2] + x, height * gSquareVertices[3] + y,
-        width * gSquareVertices[4] + x, height * gSquareVertices[5] + y,
-        width * gSquareVertices[6] + x, height * gSquareVertices[9] + y,
-      };
-
       const uint32_t vboIndex = i * 8;
-      memcpy(&vboData[vboIndex], vboValues, 32);
+      vboData[vboIndex + 0] = gSquareVertices[0] + x;
+      vboData[vboIndex + 1] = gSquareVertices[1] + y;
+      vboData[vboIndex + 2] = gSquareVertices[2] + x;
+      vboData[vboIndex + 3] = gSquareVertices[3] + y;
+      vboData[vboIndex + 4] = gSquareVertices[4] + x;
+      vboData[vboIndex + 5] = gSquareVertices[5] + y;
+      vboData[vboIndex + 6] = gSquareVertices[6] + x;
+      vboData[vboIndex + 7] = gSquareVertices[7] + y;
 
       ++i;
     }

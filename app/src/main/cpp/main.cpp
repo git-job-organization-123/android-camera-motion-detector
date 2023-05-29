@@ -13,35 +13,186 @@ int cameraHeight;
 GLuint gProgram;
 GLuint gTextureProgram;
 
-// Change to this shader program on next tick
-GLuint changeToProgram;
-
 // Shader program currently in use
 GLuint currentProgram;
 
-// Red square arrays
-GLuint gvPositionHandle;
 GLuint ibo;
 GLuint vbo;
 
-// Add attribute arrays for the texture coordinates and a handle for the texture uniform
-GLuint gvtPositionHandle;
-GLint gvtTexCoordHandle;
-GLint gutTextureHandle;
-GLuint gTexture;
+GLfloat *vboData = (GLfloat*)malloc(10000000 * sizeof(GLfloat));
+
+class Renderer {
+public:
+  GLuint program;
+  GLuint positionHandle;
+
+  const GLushort indices[6] = {
+    0, 1, 2,
+    2, 3, 0
+  };
+
+  Renderer(GLuint program_) {
+    program = program_;
+    positionHandle = glGetAttribLocation(program_, "vPosition");
+  }
+
+  virtual void update() {}
+  virtual void draw() {}
+  virtual void setImageData(unsigned char* imageData_) {}
+};
+
+class LinesRenderer : public Renderer {
+public:
+  const float squareWidth = 0.01f;
+  const float squareHeight = 0.01f;
+
+  // Square
+  const GLfloat squareVertices[8] = {
+     0.5f * squareWidth,  0.5f * squareHeight, // top right
+     0.5f * squareWidth, -0.5f * squareHeight, // bottom right
+    -0.5f * squareWidth, -0.5f * squareHeight, // bottom left
+    -0.5f * squareWidth,  0.5f * squareHeight  // top left
+  };
+
+  LinesRenderer(GLuint program_)
+  : Renderer(program_) {
+  }
+
+  void draw() override {
+    int i = 0;
+
+    for (const auto& contour : contours) {
+      for (const auto& point : contour) {
+        float x = -(point.y / (cameraHeight * 0.5f)) + 1.0f;
+        float y = -(point.x / (cameraWidth * 0.5f)) + 1.0f;
+
+        const uint32_t vboIndex = i * 8;
+        vboData[vboIndex + 0] = squareVertices[0] + x;
+        vboData[vboIndex + 1] = squareVertices[1] + y;
+        vboData[vboIndex + 2] = squareVertices[2] + x;
+        vboData[vboIndex + 3] = squareVertices[3] + y;
+        vboData[vboIndex + 4] = squareVertices[4] + x;
+        vboData[vboIndex + 5] = squareVertices[5] + y;
+        vboData[vboIndex + 6] = squareVertices[6] + x;
+        vboData[vboIndex + 7] = squareVertices[7] + y;
+
+        ++i;
+      }
+    }
+
+    size_t numSquares = i;
+    size_t vboSize = numSquares * 32;
+
+    // VBO
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, vboSize, vboData, GL_DYNAMIC_DRAW);
+
+    // Set up the vertex attribute pointers
+    glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(positionHandle);
+
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Draw the lines
+    glDrawArrays(GL_TRIANGLES, 0, numSquares * 6);
+
+    glDisableVertexAttribArray(positionHandle);
+
+    glDeleteBuffers(1, &vbo);
+  }
+};
+
+class TextureRenderer : public Renderer {
+public:
+  GLint texCoordHandle;
+  GLint textureHandle;
+  GLuint texture;
+
+  // Texture
+  const GLfloat textureVertices[16] = {
+     1.0f,  1.0f, 0.0f, 0.0f, // top right
+     1.0f, -1.0f, 1.0f, 0.0f, // bottom right
+    -1.0f, -1.0f, 1.0f, 1.0f, // bottom left
+    -1.0f,  1.0f, 0.0f, 1.0f  // top left
+  };
+
+  const size_t textureVerticesSize = 4 * sizeof(GLfloat);
+  const size_t iboSize = 6 * sizeof(GLushort);
+
+  unsigned char* imageData;
+
+  TextureRenderer(GLuint program_)
+  : Renderer(program_) {
+    texCoordHandle = glGetAttribLocation(program_, "vTexCoord");
+    textureHandle = glGetUniformLocation(program_, "uTexture");
+
+    glVertexAttribPointer(texCoordHandle, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), textureVertices + 2);
+    glEnableVertexAttribArray(texCoordHandle);
+
+    glActiveTexture(GL_TEXTURE0);
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    glUniform1i(textureHandle, 0);
+  }
+
+  void draw() override {
+    if (imageData == nullptr) {
+      return;
+    }
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, iboSize, indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, textureVerticesSize, textureVertices);
+    glEnableVertexAttribArray(positionHandle);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cameraWidth, cameraHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+
+    glDisableVertexAttribArray(positionHandle);
+  }
+
+  void setImageData(unsigned char* imageData_) override {
+    imageData = imageData_;
+  }
+};
+
+Renderer *renderer;
+
+void setRenderer(Renderer *renderer_) {
+  renderer = renderer_;
+}
+
+LinesRenderer *linesRenderer;
+TextureRenderer *textureRenderer;
+
+void setupRenderers() {
+  linesRenderer = new LinesRenderer(gProgram);
+  textureRenderer = new TextureRenderer(gTextureProgram);
+}
+
+void updateRenderer() {
+  if (previewMode == PreviewMode::DETECT_MOTION_LINES) {
+    setRenderer(linesRenderer);
+  }
+  else {
+    setRenderer(textureRenderer);
+  }
+}
 
 void updatePreviewMode() {
   if (previewMode == previousPreviewMode) {
     return;
   }
-
-  if (previewMode == PreviewMode::DETECT_MOTION_LINES) {
-    changeToProgram = gProgram; // Red squares and lines shader
-  }
-  else {
-    changeToProgram = gTextureProgram; // Texture shader
-  }
   
+  updateRenderer();
+
   previousPreviewMode = previewMode;
 }
 
@@ -149,150 +300,39 @@ GLuint createProgram(const char *vertexSource, const char *fragmentSource) {
   return program;
 }
 
-float squareWidth = 0.01f;
-float squareHeight = 0.01f;
-
-// Square
-GLfloat gSquareVertices[] = {
-   0.5f * squareWidth,  0.5f * squareHeight, // top right
-   0.5f * squareWidth, -0.5f * squareHeight, // bottom right
-  -0.5f * squareWidth, -0.5f * squareHeight, // bottom left
-  -0.5f * squareWidth,  0.5f * squareHeight  // top left
-};
-
-// Texture
-GLfloat gTextureVertices[] = {
-   1.0f,  1.0f, 0.0f, 0.0f,  // top right
-   1.0f, -1.0f, 1.0f, 0.0f,  // bottom right
-  -1.0f, -1.0f, 1.0f, 1.0f,  // bottom left
-  -1.0f,  1.0f, 0.0f, 1.0f,  // top left
-};
-
-const GLushort gIndices[] = {
-  0, 1, 2,
-  2, 3, 0
-};
-
 void setupGraphics(int width, int height) {
   gProgram = createProgram(gVertexShader, gFragmentShader);
   if (!gProgram) {
     return;
   }
 
-  gvPositionHandle = glGetAttribLocation(gProgram, "vPosition");
-
   gTextureProgram = createProgram(gTextureVertexShader, gTextureFragmentShader);
   if (!gTextureProgram) {
     return;
   }
 
-  gvtPositionHandle = glGetAttribLocation(gTextureProgram, "vPosition");
-  gvtTexCoordHandle = glGetAttribLocation(gTextureProgram, "vTexCoord");
-  gutTextureHandle = glGetUniformLocation(gTextureProgram, "uTexture");
-
   // Default program
   glUseProgram(gTextureProgram);
   currentProgram = gTextureProgram;
-  changeToProgram = gTextureProgram;
 
   glGenBuffers(1, &vbo);
   glGenBuffers(1, &ibo);
 
   glViewport(0, 0, width, height);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-  glVertexAttribPointer(gvtTexCoordHandle, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), gTextureVertices + 2);
-  glEnableVertexAttribArray(gvtTexCoordHandle);
-
-  glActiveTexture(GL_TEXTURE0);
-
-  glGenTextures(1, &gTexture);
-  glBindTexture(GL_TEXTURE_2D, gTexture);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-  glUniform1i(gutTextureHandle, 0);
-}
-
-GLfloat *vboData = (GLfloat*)malloc(10000000 * sizeof(GLfloat));
-
-void drawSmallRedLines() {
-  int i = 0;
-
-  for (const auto& contour : contours) {
-    for (const auto& point : contour) {
-      float x = -(point.y / (cameraHeight * 0.5f)) + 1.0f;
-      float y = -(point.x / (cameraWidth * 0.5f)) + 1.0f;
-
-      const uint32_t vboIndex = i * 8;
-      vboData[vboIndex + 0] = gSquareVertices[0] + x;
-      vboData[vboIndex + 1] = gSquareVertices[1] + y;
-      vboData[vboIndex + 2] = gSquareVertices[2] + x;
-      vboData[vboIndex + 3] = gSquareVertices[3] + y;
-      vboData[vboIndex + 4] = gSquareVertices[4] + x;
-      vboData[vboIndex + 5] = gSquareVertices[5] + y;
-      vboData[vboIndex + 6] = gSquareVertices[6] + x;
-      vboData[vboIndex + 7] = gSquareVertices[7] + y;
-
-      ++i;
-    }
-  }
-
-  size_t numSquares = i;
-  size_t vboSize = numSquares * 32;
-
-  // VBO
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, vboSize, vboData, GL_DYNAMIC_DRAW);
-
-  // Set up the vertex attribute pointers
-  glVertexAttribPointer(gvPositionHandle, 2, GL_FLOAT, GL_FALSE, 0, 0);
-  glEnableVertexAttribArray(gvPositionHandle);
-
-  glClear(GL_COLOR_BUFFER_BIT);
-
-  // Draw the lines
-  glDrawArrays(GL_TRIANGLES, 0, numSquares * 6);
-
-  glDisableVertexAttribArray(gvPositionHandle);
-
-  glDeleteBuffers(1, &vbo);
-}
-
-const size_t textureVerticesSize = 4 * sizeof(GLfloat);
-const size_t iboSize = 6 * sizeof(GLushort);
-
-void drawTexture(unsigned char* imageData, int width, int height) {
-  if (imageData == nullptr) {
-    return;
-  }
-
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, iboSize, gIndices, GL_STATIC_DRAW);
-
-  glVertexAttribPointer(gvtPositionHandle, 2, GL_FLOAT, GL_FALSE, textureVerticesSize, gTextureVertices);
-  glEnableVertexAttribArray(gvtPositionHandle);
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
-
-  glDisableVertexAttribArray(gvtPositionHandle);
 }
 
 void renderFrame() {
-  if (currentProgram != changeToProgram) {
-    glUseProgram(changeToProgram);
-    currentProgram = changeToProgram;
+  if (currentProgram != renderer->program) {
+    glUseProgram(renderer->program);
+    currentProgram = renderer->program;
   }
 
-  if (previewMode == PreviewMode::DETECT_MOTION_LINES) { // Red motion lines
-    drawSmallRedLines();
+  if (previewMode != PreviewMode::DETECT_MOTION_LINES) { // Motion on image
+    renderer->setImageData(processedImage.data);
   }
-  else { // Preview motion
-    drawTexture(processedImage.data, cameraWidth, cameraHeight);
-  }
+
+  renderer->draw();
 }
 
 extern "C" {
@@ -305,6 +345,9 @@ extern "C" {
 
 JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_init(JNIEnv *env, jobject obj,  jint width, jint height) {
   setupGraphics(width, height);
+  setupRenderers();
+
+  updateRenderer();
 
   initialized = true;
 }
@@ -401,6 +444,6 @@ JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_processImageB
 JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_touch(JNIEnv* env,
                                                                              jobject obj,
                                                                              int previewMode_) {
-  previewMode = static_cast<PreviewMode>(previewMode_);
+  previewMode = static_cast<PreviewMode>(previewMode_); // Set preview mode
   updatePreviewMode();
 }

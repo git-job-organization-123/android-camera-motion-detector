@@ -2,13 +2,10 @@
 #include <android/log.h>
 #include <GLES3/gl3.h>
 #include <array>
-#include "previewmode.h"
+#include "globals.h"
 #include "detector.cpp"
 
 bool initialized;
-
-int cameraWidth;
-int cameraHeight;
 
 GLuint gProgram;
 GLuint gTextureProgram;
@@ -16,10 +13,16 @@ GLuint gTextureProgram;
 // Shader program currently in use
 GLuint currentProgram;
 
-GLuint ibo;
-GLuint vbo;
+void setupDefaults() {
+  // Default preview mode
+  previewMode = PreviewMode::DETECT_PREVIEW_MOTION_WHITE;
+  previousPreviewMode = previewMode;
+}
 
-GLfloat *vboData = (GLfloat*)malloc(10000000 * sizeof(GLfloat));
+void allocateBuffers() {
+  // Allocate memory for vertex buffer object
+  vboData = (GLfloat*)malloc(10000000 * sizeof(GLfloat));
+}
 
 class Renderer {
 public:
@@ -344,6 +347,9 @@ extern "C" {
 };
 
 JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_init(JNIEnv *env, jobject obj,  jint width, jint height) {
+  setupDefaults();
+  allocateBuffers();
+
   setupGraphics(width, height);
   setupRenderers();
 

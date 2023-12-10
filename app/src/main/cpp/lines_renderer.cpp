@@ -1,14 +1,11 @@
 class LinesRenderer : public Renderer {
 public:
-  const float squareWidth = 0.01f;
-  const float squareHeight = 0.01f;
-
   // Square
   const GLfloat squareVertices[8] = {
-     0.5f * squareWidth,  0.5f * squareHeight, // top right
-     0.5f * squareWidth, -0.5f * squareHeight, // bottom right
-    -0.5f * squareWidth, -0.5f * squareHeight, // bottom left
-    -0.5f * squareWidth,  0.5f * squareHeight  // top left
+     0.005f,  0.005f, // top right
+     0.005f, -0.005f, // bottom right
+    -0.005f, -0.005f, // bottom left
+    -0.005f,  0.005f  // top left
   };
 
   LinesRenderer(GLuint program_)
@@ -16,14 +13,14 @@ public:
   }
 
   void draw() override {
-    int i = 0;
+    GLint i = 0;
 
     for (const auto& contour : contours) {
       for (const auto& point : contour) {
-        float x = -(point.y / (cameraHeight * 0.5f)) + 1.0f;
-        float y = -(point.x / (cameraWidth * 0.5f)) + 1.0f;
+        const GLfloat x = -(point.y / (cameraHeight * 0.5f)) + 1.0f;
+        const GLfloat y = -(point.x / (cameraWidth * 0.5f)) + 1.0f;
 
-        const uint32_t vboIndex = i * 8;
+        const GLint vboIndex = i * 8;
         vboData[vboIndex + 0] = squareVertices[0] + x;
         vboData[vboIndex + 1] = squareVertices[1] + y;
         vboData[vboIndex + 2] = squareVertices[2] + x;
@@ -37,8 +34,8 @@ public:
       }
     }
 
-    size_t numSquares = i;
-    size_t vboSize = numSquares * 32;
+    const GLint numSquares = i;
+    const GLint vboSize = numSquares * 8 * sizeof(GLint);
 
     // VBO
     glBindBuffer(GL_ARRAY_BUFFER, vbo);

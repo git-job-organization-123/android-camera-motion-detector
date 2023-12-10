@@ -7,11 +7,8 @@ using namespace cv;
 // NV21 image from Android device
 cv::Mat grayImage;
 
-// Motion or edge image
+// Motion image
 cv::Mat processedImage;
-
-// Fast feature detector
-cv::Ptr<cv::Feature2D> featureDetector;
 
 // Motion points (red lines)
 std::vector<std::vector<cv::Point>> contours;
@@ -27,7 +24,7 @@ void detectMotion(cv::Mat &motionImage) {
 
   // Check if the previous frame is invalid
   if (prevGrayImage.empty()) {
-    // Initialize the previous frame and points
+    // Initialize the previous frame
     prevGrayImage = grayImage;
     return;
   }
@@ -137,7 +134,10 @@ void detect() {
         || previewMode == PreviewMode::DETECT_PREVIEW_MOTION_BLUE
         || previewMode == PreviewMode::DETECT_PREVIEW_MOTION_GRAYSCALE
         || previewMode == PreviewMode::DETECT_PREVIEW_MOTION_WHITE_WITH_BACKGROUND) { // Preview motion
+    // Get motion image
     detectMotion(processedImage);
+
+    // Use CVT color to process motion image colors
     cv::cvtColor(processedImage, processedImage, cv::COLOR_BGR2RGB);
   }
 }

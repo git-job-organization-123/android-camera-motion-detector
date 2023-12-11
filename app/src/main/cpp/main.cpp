@@ -2,8 +2,25 @@
 #include <android/log.h>
 #include <GLES3/gl3.h>
 #include <array>
+
+#include <opencv2/core.hpp> // OpenCV core
+#include <opencv2/imgproc.hpp> // OpenCV COLOR_
+// #include <opencv2/features2d.hpp> // OpenCV fast feature detector
+
+using namespace cv;
+
 #include "globals.h"
 #include "detector.cpp"
+#include "detector_motion.cpp"
+#include "detector_motion_image.cpp"
+#include "detector_motion_image_color.cpp"
+#include "detector_motion_image_red.cpp"
+#include "detector_motion_image_green.cpp"
+#include "detector_motion_image_blue.cpp"
+#include "detector_motion_image_white.cpp"
+#include "detector_motion_image_grayscale.cpp"
+#include "detector_motion_image_background.cpp"
+#include "detector_motion_red_lines.cpp"
 #include "renderer.cpp"
 #include "lines_renderer.cpp"
 #include "texture_renderer.cpp"
@@ -25,6 +42,60 @@ void setupDefaults() {
 void allocateBuffers() {
   // Allocate memory for vertex buffer object
   vboData = (GLfloat*)malloc(10000000 * sizeof(GLfloat));
+}
+
+Detector *detector = nullptr;
+
+void setDetector(Detector *detector_) {
+  detector = detector_;
+}
+
+Detector_Motion_Image_Red *redMotionImageDetector;
+Detector_Motion_Image_Green *greenMotionImageDetector;
+Detector_Motion_Image_Blue *blueMotionImageDetector;
+Detector_Motion_Image_White *whiteMotionImageDetector;
+Detector_Motion_Image_Grayscale *grayscaleMotionImageDetector;
+Detector_Motion_Image_Background *backgroundMotionImageDetector;
+Detector_Motion_Red_Lines *redLinesMotionDetector;
+
+void setupDetectors() {
+  redMotionImageDetector = new Detector_Motion_Image_Red();
+  greenMotionImageDetector = new Detector_Motion_Image_Green();
+  blueMotionImageDetector = new Detector_Motion_Image_Blue();
+  whiteMotionImageDetector = new Detector_Motion_Image_White();
+  grayscaleMotionImageDetector = new Detector_Motion_Image_Grayscale();
+  backgroundMotionImageDetector = new Detector_Motion_Image_Background();
+  redLinesMotionDetector = new Detector_Motion_Red_Lines();
+}
+
+void updateDetector() {
+  if (detector != nullptr) {
+    detector->clear();
+  }
+
+  switch (previewMode) {
+    case PreviewMode::DETECT_PREVIEW_MOTION_WHITE:
+      detector = whiteMotionImageDetector;
+      break;
+    case PreviewMode::DETECT_PREVIEW_MOTION_RED:
+      detector = redMotionImageDetector;
+      break;
+    case PreviewMode::DETECT_PREVIEW_MOTION_GREEN:
+      detector = greenMotionImageDetector;
+      break;
+    case PreviewMode::DETECT_PREVIEW_MOTION_BLUE:
+      detector = blueMotionImageDetector;
+      break;
+    case PreviewMode::DETECT_PREVIEW_MOTION_GRAYSCALE:
+      detector = grayscaleMotionImageDetector;
+      break;
+    case PreviewMode::DETECT_PREVIEW_MOTION_WHITE_WITH_BACKGROUND:
+      detector = backgroundMotionImageDetector;
+      break;
+    case PreviewMode::DETECT_MOTION_LINES:
+      detector = redLinesMotionDetector;
+      break;
+  }
 }
 
 Renderer *renderer;
@@ -55,6 +126,7 @@ void updatePreviewMode() {
     return;
   }
   
+  updateDetector();
   updateRenderer();
 
   previousPreviewMode = previewMode;
@@ -186,14 +258,23 @@ void setupGraphics(int width, int height) {
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
+void detectFrame(unsigned char* nv21ImageData) {  
+  detector->setImageData(nv21ImageData);
+  detector->detect();
+  detector->clearImage();
+}
+
 void renderFrame() {
   if (currentProgram != renderer->program) {
     glUseProgram(renderer->program);
     currentProgram = renderer->program;
   }
 
-  if (previewMode != PreviewMode::DETECT_MOTION_LINES) { // Motion on image
-    renderer->setImageData(processedImage.data);
+  if (previewMode == PreviewMode::DETECT_MOTION_LINES) { // Contours (points) (TODO: Fix crash)
+    renderer->setContours(detector->contours);
+  }
+  else { // Image motion
+    renderer->setImageData(detector->processedImage.data);
   }
 
   renderer->draw();
@@ -213,7 +294,9 @@ JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_init(JNIEnv *
 
   setupGraphics(width, height);
   setupRenderers();
+  setupDetectors();
 
+  updateDetector();
   updateRenderer();
 
   initialized = true;
@@ -256,7 +339,7 @@ JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_processImageB
     unsigned char* uData = (unsigned char*)env->GetDirectBufferAddress(u);
     unsigned char* vData = (unsigned char*)env->GetDirectBufferAddress(v);
 
-    unsigned char* nv21 = (unsigned char*)malloc(ySize + uSize + vSize);
+    unsigned char* nv21ImageData = (unsigned char*)malloc(ySize + uSize + vSize);
 
     int yIndex = 0;
     int uvIndex = ySize;
@@ -271,30 +354,23 @@ JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_processImageB
       int ySizeWidth = cameraWidth * yPixelStride;
 
       // Use memcpy to copy the Y data
-      memcpy(nv21 + yIndex, yData + ySrcIndex, ySizeWidth);
+      memcpy(nv21ImageData + yIndex, yData + ySrcIndex, ySizeWidth);
       yIndex += cameraWidth * yPixelStride;
 
       if (i % 2 == 0) {
         // Use memcpy to copy the U and V data
-        memcpy(nv21 + uvIndex, uData + uvSrcIndex, cameraWidth * uPixelStride / 2);
+        memcpy(nv21ImageData + uvIndex, uData + uvSrcIndex, cameraWidth * uPixelStride / 2);
         uvIndex += cameraWidth * uPixelStride / 2;
-        memcpy(nv21 + uvIndex, uData + uvSrcIndex, cameraWidth * vPixelStride / 2);
+        memcpy(nv21ImageData + uvIndex, uData + uvSrcIndex, cameraWidth * vPixelStride / 2);
         uvIndex += cameraWidth * vPixelStride / 2;
       }
     }
 
-    grayImage.create(cameraHeight, cameraWidth, CV_8UC1);
-    grayImage.data = nv21;
-    cv::cvtColor(grayImage, grayImage, cv::COLOR_BGR2RGB);
+    // Detect motion from image
+    detectFrame(nv21ImageData);
 
-    // Detection method for image
-    detect();
-
-    // Free memory
-    free(nv21);
-
-    // Clear image data
-    grayImage.release();
+    // Delete NV21 image from memory
+    free(nv21ImageData);
 
     env->DeleteLocalRef(y);
     env->DeleteLocalRef(u);

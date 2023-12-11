@@ -1,5 +1,9 @@
 class LinesRenderer : public Renderer {
 public:
+  LinesRenderer(GLuint program_)
+  : Renderer(program_) {
+  }
+
   // Square
   const GLfloat squareVertices[8] = {
      0.005f,  0.005f, // top right
@@ -8,8 +12,8 @@ public:
     -0.005f,  0.005f  // top left
   };
 
-  LinesRenderer(GLuint program_)
-  : Renderer(program_) {
+  void setContours(std::vector<std::vector<cv::Point>> contours_) override {
+    contours = contours_;
   }
 
   void draw() override {
@@ -54,4 +58,7 @@ public:
 
     glDeleteBuffers(1, &vbo);
   }
+
+private:
+  std::vector<std::vector<cv::Point>> contours;
 };

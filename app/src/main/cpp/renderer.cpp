@@ -16,4 +16,5 @@ public:
   virtual void update() {}
   virtual void draw() {}
   virtual void setImageData(unsigned char* imageData_) {}
+  virtual void setContours(std::vector<std::vector<cv::Point>> contours_) {}
 };

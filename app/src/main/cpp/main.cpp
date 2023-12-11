@@ -39,11 +39,6 @@ void setupDefaults() {
   previousPreviewMode = previewMode;
 }
 
-void allocateBuffers() {
-  // Allocate memory for vertex buffer object
-  vboData = (GLfloat*)malloc(10000000 * sizeof(GLfloat));
-}
-
 Detector *detector = nullptr;
 
 void setDetector(Detector *detector_) {
@@ -270,7 +265,7 @@ void renderFrame() {
     currentProgram = renderer->program;
   }
 
-  if (previewMode == PreviewMode::DETECT_MOTION_LINES) { // Contours (points) (TODO: Fix crash)
+  if (previewMode == PreviewMode::DETECT_MOTION_LINES) { // Contours (points)
     renderer->setContours(detector->contours);
   }
   else { // Image motion
@@ -290,7 +285,6 @@ extern "C" {
 
 JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_init(JNIEnv *env, jobject obj,  jint width, jint height) {
   setupDefaults();
-  allocateBuffers();
 
   setupGraphics(width, height);
   setupRenderers();

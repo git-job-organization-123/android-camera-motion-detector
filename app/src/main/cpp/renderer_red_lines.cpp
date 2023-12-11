@@ -17,33 +17,38 @@ public:
   }
 
   void draw() override {
-    GLint i = 0;
+    std::vector<GLfloat> vboDataVector;
+
+    GLint numSquares = 0;
 
     for (const auto& contour : contours) {
       for (const auto& point : contour) {
+        if (numSquares > 100000) {
+          // Prevent crash with limit
+          continue;
+        }
+
         const GLfloat x = -(point.y / (cameraHeight * 0.5f)) + 1.0f;
         const GLfloat y = -(point.x / (cameraWidth * 0.5f)) + 1.0f;
 
-        const GLint vboIndex = i * 8;
-        vboData[vboIndex + 0] = squareVertices[0] + x;
-        vboData[vboIndex + 1] = squareVertices[1] + y;
-        vboData[vboIndex + 2] = squareVertices[2] + x;
-        vboData[vboIndex + 3] = squareVertices[3] + y;
-        vboData[vboIndex + 4] = squareVertices[4] + x;
-        vboData[vboIndex + 5] = squareVertices[5] + y;
-        vboData[vboIndex + 6] = squareVertices[6] + x;
-        vboData[vboIndex + 7] = squareVertices[7] + y;
+        vboDataVector.emplace_back(squareVertices[0] + x);
+        vboDataVector.emplace_back(squareVertices[1] + y);
+        vboDataVector.emplace_back(squareVertices[2] + x);
+        vboDataVector.emplace_back(squareVertices[3] + y);
+        vboDataVector.emplace_back(squareVertices[4] + x);
+        vboDataVector.emplace_back(squareVertices[5] + y);
+        vboDataVector.emplace_back(squareVertices[6] + x);
+        vboDataVector.emplace_back(squareVertices[7] + y);
 
-        ++i;
+        ++numSquares;
       }
     }
 
-    const GLint numSquares = i;
-    const GLint vboSize = numSquares * 8 * sizeof(GLint);
+    const GLint vboSize = vboDataVector.size() * sizeof(GLfloat);
 
     // VBO
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vboSize, vboData, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vboSize, vboDataVector.data(), GL_DYNAMIC_DRAW);
 
     // Set up the vertex attribute pointers
     glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, 0, 0);

@@ -1,4 +1,4 @@
-class TextureRenderer : public Renderer {
+class Renderer_Texture : public Renderer {
 public:
   GLint texCoordHandle;
   GLint textureHandle;
@@ -17,7 +17,7 @@ public:
 
   unsigned char* imageData;
 
-  TextureRenderer(GLuint program_)
+  Renderer_Texture(GLuint program_)
   : Renderer(program_) {
     texCoordHandle = glGetAttribLocation(program_, "vTexCoord");
     textureHandle = glGetUniformLocation(program_, "uTexture");

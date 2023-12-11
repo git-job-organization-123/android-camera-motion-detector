@@ -22,8 +22,8 @@ using namespace cv;
 #include "detector_motion_image_background.cpp"
 #include "detector_motion_red_lines.cpp"
 #include "renderer.cpp"
-#include "lines_renderer.cpp"
-#include "texture_renderer.cpp"
+#include "renderer_red_lines.cpp"
+#include "renderer_texture.cpp"
 
 bool initialized;
 
@@ -104,17 +104,17 @@ void setRenderer(Renderer *renderer_) {
   renderer = renderer_;
 }
 
-LinesRenderer *linesRenderer;
-TextureRenderer *textureRenderer;
+Renderer_Red_Lines *redLinesRenderer;
+Renderer_Texture *textureRenderer;
 
 void setupRenderers() {
-  linesRenderer = new LinesRenderer(gProgram);
-  textureRenderer = new TextureRenderer(gTextureProgram);
+  redLinesRenderer = new Renderer_Red_Lines(gProgram);
+  textureRenderer = new Renderer_Texture(gTextureProgram);
 }
 
 void updateRenderer() {
   if (previewMode == PreviewMode::DETECT_MOTION_LINES) {
-    setRenderer(linesRenderer);
+    setRenderer(redLinesRenderer);
   }
   else {
     setRenderer(textureRenderer);

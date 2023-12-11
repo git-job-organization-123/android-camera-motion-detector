@@ -1,6 +1,6 @@
-class LinesRenderer : public Renderer {
+class Renderer_Red_Lines : public Renderer {
 public:
-  LinesRenderer(GLuint program_)
+  Renderer_Red_Lines(GLuint program_)
   : Renderer(program_) {
   }
 

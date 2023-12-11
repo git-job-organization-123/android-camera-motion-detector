@@ -33,7 +33,7 @@ public:
     positionHandle = glGetAttribLocation(program, "vPosition");
   }
 
-  void setContours(std::vector<std::vector<cv::Point>> contours_) override {
+  void setContours(std::vector<std::vector<cv::Point>> &contours_) override {
     contours = contours_;
   }
 

@@ -39,7 +39,7 @@ public:
     texCoordHandle = glGetAttribLocation(program, "vTexCoord");
     textureHandle = glGetUniformLocation(program, "uTexture");
 
-    glVertexAttribPointer(texCoordHandle, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), textureVertices + 2);
+    glVertexAttribPointer(texCoordHandle, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), vertices + 2);
     glEnableVertexAttribArray(texCoordHandle);
 
     glActiveTexture(GL_TEXTURE0);
@@ -62,7 +62,7 @@ public:
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, iboSize, indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, textureVerticesSize, textureVertices);
+    glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, verticesSize, vertices);
     glEnableVertexAttribArray(positionHandle);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, cameraWidth, cameraHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
@@ -81,13 +81,13 @@ private:
   GLint textureHandle;
   GLuint texture;
 
-  const GLint textureVerticesSize = 4 * sizeof(GLfloat);
+  const GLint verticesSize = 4 * sizeof(GLfloat);
   const GLint iboSize = 6 * sizeof(GLushort);
 
   unsigned char* imageData;
 
   // Texture
-  const GLfloat textureVertices[16] = {
+  const GLfloat vertices[16] = {
      1.0f,  1.0f, 0.0f, 0.0f, // top right
      1.0f, -1.0f, 1.0f, 0.0f, // bottom right
     -1.0f, -1.0f, 1.0f, 1.0f, // bottom left

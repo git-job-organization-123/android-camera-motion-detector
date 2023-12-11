@@ -52,14 +52,14 @@ public:
         const GLfloat x = -(point.y / (cameraHeight * 0.5f)) + 1.0f;
         const GLfloat y = -(point.x / (cameraWidth * 0.5f)) + 1.0f;
 
-        vboDataVector.emplace_back(squareVertices[0] + x);
-        vboDataVector.emplace_back(squareVertices[1] + y);
-        vboDataVector.emplace_back(squareVertices[2] + x);
-        vboDataVector.emplace_back(squareVertices[3] + y);
-        vboDataVector.emplace_back(squareVertices[4] + x);
-        vboDataVector.emplace_back(squareVertices[5] + y);
-        vboDataVector.emplace_back(squareVertices[6] + x);
-        vboDataVector.emplace_back(squareVertices[7] + y);
+        vboDataVector.emplace_back(vertices[0] + x);
+        vboDataVector.emplace_back(vertices[1] + y);
+        vboDataVector.emplace_back(vertices[2] + x);
+        vboDataVector.emplace_back(vertices[3] + y);
+        vboDataVector.emplace_back(vertices[4] + x);
+        vboDataVector.emplace_back(vertices[5] + y);
+        vboDataVector.emplace_back(vertices[6] + x);
+        vboDataVector.emplace_back(vertices[7] + y);
 
         ++numSquares;
       }
@@ -91,7 +91,7 @@ private:
   std::vector<std::vector<cv::Point>> contours;
 
   // Square
-  const GLfloat squareVertices[8] = {
+  const GLfloat vertices[8] = {
      0.005f,  0.005f, // top right
      0.005f, -0.005f, // bottom right
     -0.005f, -0.005f, // bottom left

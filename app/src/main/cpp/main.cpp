@@ -48,16 +48,6 @@ GLuint currentProgram;
 Detector *currentDetector = nullptr;
 Renderer *currentRenderer = nullptr;
 
-void setupDefaults() {
-  // Default preview mode
-  previewMode = PreviewMode::DETECT_PREVIEW_MOTION_WHITE;
-  previousPreviewMode = previewMode;
-}
-
-void setDetector(Detector *detector) {
-  currentDetector = detector;
-}
-
 Detector_Motion_Image_Red *redMotionImageDetector;
 Detector_Motion_Image_Green *greenMotionImageDetector;
 Detector_Motion_Image_Blue *blueMotionImageDetector;
@@ -65,6 +55,15 @@ Detector_Motion_Image_White *whiteMotionImageDetector;
 Detector_Motion_Image_Grayscale *grayscaleMotionImageDetector;
 Detector_Motion_Image_Background *backgroundMotionImageDetector;
 Detector_Motion_Red_Lines *redLinesMotionDetector;
+
+Renderer_Red_Lines *redLinesRenderer;
+Renderer_Texture *textureRenderer;
+
+void setupDefaults() {
+  // Default preview mode
+  previewMode = PreviewMode::DETECT_PREVIEW_MOTION_WHITE;
+  previousPreviewMode = previewMode;
+}
 
 void setupDetectors() {
   redMotionImageDetector = new Detector_Motion_Image_Red();
@@ -74,6 +73,10 @@ void setupDetectors() {
   grayscaleMotionImageDetector = new Detector_Motion_Image_Grayscale();
   backgroundMotionImageDetector = new Detector_Motion_Image_Background();
   redLinesMotionDetector = new Detector_Motion_Red_Lines();
+}
+
+void setDetector(Detector *detector) {
+  currentDetector = detector;
 }
 
 void updateDetector() {
@@ -106,16 +109,13 @@ void updateDetector() {
   }
 }
 
-void setRenderer(Renderer *renderer) {
-  currentRenderer = renderer;
-}
-
-Renderer_Red_Lines *redLinesRenderer;
-Renderer_Texture *textureRenderer;
-
 void setupRenderers() {
   redLinesRenderer = new Renderer_Red_Lines();
   textureRenderer = new Renderer_Texture();
+}
+
+void setRenderer(Renderer *renderer) {
+  currentRenderer = renderer;
 }
 
 void updateRenderer() {
@@ -181,13 +181,17 @@ extern "C" {
 };
 
 JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_init(JNIEnv *env, jobject obj,  jint width, jint height) {
+  // Set up default preview mode
   setupDefaults();
 
+  // Set up renderer and detector classes
   setupRenderers();
   setupDetectors();
 
+  // Set up graphics
   setupGraphics(width, height);
 
+  // Select default detector and renderer
   updateDetector();
   updateRenderer();
 

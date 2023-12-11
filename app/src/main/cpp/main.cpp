@@ -22,9 +22,6 @@ enum PreviewMode {
 PreviewMode previewMode;
 PreviewMode previousPreviewMode;
 
-GLuint ibo;
-GLuint vbo;
-
 int cameraWidth;
 int cameraHeight;
 
@@ -45,11 +42,11 @@ int cameraHeight;
 
 bool initialized;
 
-GLuint gProgram;
-GLuint gTextureProgram;
-
 // Shader program currently in use
 GLuint currentProgram;
+
+Detector *currentDetector = nullptr;
+Renderer *currentRenderer = nullptr;
 
 void setupDefaults() {
   // Default preview mode
@@ -57,10 +54,8 @@ void setupDefaults() {
   previousPreviewMode = previewMode;
 }
 
-Detector *detector = nullptr;
-
-void setDetector(Detector *detector_) {
-  detector = detector_;
+void setDetector(Detector *detector) {
+  currentDetector = detector;
 }
 
 Detector_Motion_Image_Red *redMotionImageDetector;
@@ -82,47 +77,45 @@ void setupDetectors() {
 }
 
 void updateDetector() {
-  if (detector != nullptr) {
-    detector->clear();
+  if (currentDetector != nullptr) {
+    currentDetector->clear();
   }
 
   switch (previewMode) {
     case PreviewMode::DETECT_PREVIEW_MOTION_WHITE:
-      detector = whiteMotionImageDetector;
+      currentDetector = whiteMotionImageDetector;
       break;
     case PreviewMode::DETECT_PREVIEW_MOTION_RED:
-      detector = redMotionImageDetector;
+      currentDetector = redMotionImageDetector;
       break;
     case PreviewMode::DETECT_PREVIEW_MOTION_GREEN:
-      detector = greenMotionImageDetector;
+      currentDetector = greenMotionImageDetector;
       break;
     case PreviewMode::DETECT_PREVIEW_MOTION_BLUE:
-      detector = blueMotionImageDetector;
+      currentDetector = blueMotionImageDetector;
       break;
     case PreviewMode::DETECT_PREVIEW_MOTION_GRAYSCALE:
-      detector = grayscaleMotionImageDetector;
+      currentDetector = grayscaleMotionImageDetector;
       break;
     case PreviewMode::DETECT_PREVIEW_MOTION_WHITE_WITH_BACKGROUND:
-      detector = backgroundMotionImageDetector;
+      currentDetector = backgroundMotionImageDetector;
       break;
     case PreviewMode::DETECT_MOTION_LINES:
-      detector = redLinesMotionDetector;
+      currentDetector = redLinesMotionDetector;
       break;
   }
 }
 
-Renderer *renderer;
-
-void setRenderer(Renderer *renderer_) {
-  renderer = renderer_;
+void setRenderer(Renderer *renderer) {
+  currentRenderer = renderer;
 }
 
 Renderer_Red_Lines *redLinesRenderer;
 Renderer_Texture *textureRenderer;
 
 void setupRenderers() {
-  redLinesRenderer = new Renderer_Red_Lines(gProgram);
-  textureRenderer = new Renderer_Texture(gTextureProgram);
+  redLinesRenderer = new Renderer_Red_Lines();
+  textureRenderer = new Renderer_Texture();
 }
 
 void updateRenderer() {
@@ -145,152 +138,38 @@ void updatePreviewMode() {
   previousPreviewMode = previewMode;
 }
 
-const char* gVertexShader = R"(#version 300 es
-  layout(location = 0) in vec2 vPosition;
-
-  void main() {
-    gl_Position = vec4(vPosition, 0.0, 1.0);
-  }
-)";
-
-const char* gFragmentShader = R"(#version 300 es
-  precision mediump float;
-  out vec4 fragColor;
-
-  void main() {
-    fragColor = vec4(1.0, 0.0, 0.0, 1.0); // default color is red 
-  }
-)";
-
-const char* gTextureVertexShader = R"(#version 300 es
-  layout(location = 0) in vec2 vPosition;
-  layout(location = 1) in vec2 vTexCoord;
-  out vec2 texCoord;
-
-  void main() {
-    gl_Position = vec4(vPosition, 0.0, 1.0);
-    texCoord = vTexCoord;
-  }
-)";
-
-const char* gTextureFragmentShader = R"(#version 300 es
-  precision mediump float;
-  in vec2 texCoord;
-  uniform sampler2D uTexture;
-  out vec4 fragColor;
-
-  void main() {
-    fragColor = texture(uTexture, texCoord);
-  }
-)";
-
-GLuint loadShader(GLenum type, const char *shaderSrc) {
-  GLuint shader;
-  GLint compiled;
-  shader = glCreateShader(type);
-
-  if (shader == 0) {
-    return 0;
-  }
-
-  glShaderSource(shader, 1, &shaderSrc, NULL);
-  glCompileShader(shader);
-  glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-  if (!compiled) {
-    GLint infoLen = 0;
-    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLen);
-    if (infoLen > 1) {
-      char *infoLog = (char *)malloc(sizeof(char) * infoLen);
-      glGetShaderInfoLog(shader, infoLen, NULL, infoLog);
-      __android_log_print(ANDROID_LOG_ERROR, "MotionDetector", "Error compiling shader:\n%s\n", infoLog);
-      free(infoLog);
-    }
-    glDeleteShader(shader);
-    return 0;
-  }
-  return shader;
-}
-
-GLuint createProgram(const char *vertexSource, const char *fragmentSource) {
-  GLuint vertexShader = loadShader(GL_VERTEX_SHADER, vertexSource);
-  if (!vertexShader) {
-    return 0;
-  }
-
-  GLuint fragmentShader = loadShader(GL_FRAGMENT_SHADER, fragmentSource);
-  if (!fragmentShader) {
-    return 0;
-  }
-
-  GLuint program = glCreateProgram();
-  if (program == 0) {
-    return 0;
-  }
-
-  glAttachShader(program, vertexShader);
-  glAttachShader(program, fragmentShader);
-  glLinkProgram  (program);
-  GLint linkStatus = GL_FALSE;
-  glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
-  if (linkStatus != GL_TRUE) {
-    GLint bufLength = 0;
-    glGetProgramiv(program, GL_INFO_LOG_LENGTH, &bufLength);
-    if (bufLength) {
-      char *buf = (char *)malloc(bufLength);
-      if (buf) {
-        glGetProgramInfoLog(program, bufLength, NULL, buf);
-        __android_log_print(ANDROID_LOG_ERROR, "MotionDetector", "Could not link program:\n%s\n", buf);
-        free(buf);
-      }
-    }
-    glDeleteProgram(program);
-    program = 0;
-  }
-  return program;
-}
-
 void setupGraphics(int width, int height) {
-  gProgram = createProgram(gVertexShader, gFragmentShader);
-  if (!gProgram) {
-    return;
-  }
-
-  gTextureProgram = createProgram(gTextureVertexShader, gTextureFragmentShader);
-  if (!gTextureProgram) {
-    return;
-  }
+  textureRenderer->setupProgram();  
+  redLinesRenderer->setupProgram();  
 
   // Default program
-  glUseProgram(gTextureProgram);
-  currentProgram = gTextureProgram;
-
-  glGenBuffers(1, &vbo);
-  glGenBuffers(1, &ibo);
+  glUseProgram(textureRenderer->program);
+  currentProgram = textureRenderer->program;
 
   glViewport(0, 0, width, height);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void detectFrame(unsigned char* nv21ImageData) {  
-  detector->setImageData(nv21ImageData);
-  detector->detect();
-  detector->clearImage();
+  currentDetector->setImageData(nv21ImageData);
+  currentDetector->detect();
+  currentDetector->clearImage();
 }
 
 void renderFrame() {
-  if (currentProgram != renderer->program) {
-    glUseProgram(renderer->program);
-    currentProgram = renderer->program;
+  if (currentProgram != currentRenderer->program) {
+    glUseProgram(currentRenderer->program);
+    currentProgram = currentRenderer->program;
   }
 
   if (previewMode == PreviewMode::DETECT_MOTION_LINES) { // Contours (points)
-    renderer->setContours(detector->contours);
+    currentRenderer->setContours(currentDetector->contours);
   }
   else { // Image motion
-    renderer->setImageData(detector->processedImage.data);
+    currentRenderer->setImageData(currentDetector->processedImage.data);
   }
 
-  renderer->draw();
+  currentRenderer->draw();
 }
 
 extern "C" {
@@ -304,9 +183,10 @@ extern "C" {
 JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_init(JNIEnv *env, jobject obj,  jint width, jint height) {
   setupDefaults();
 
-  setupGraphics(width, height);
   setupRenderers();
   setupDetectors();
+
+  setupGraphics(width, height);
 
   updateDetector();
   updateRenderer();

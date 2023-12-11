@@ -1,16 +1,37 @@
 class Renderer_Red_Lines : public Renderer {
 public:
-  Renderer_Red_Lines(GLuint program_)
-  : Renderer(program_) {
+  const char* getVertexShader() override {
+    return R"(#version 300 es
+      layout(location = 0) in vec2 vPosition;
+
+      void main() {
+        gl_Position = vec4(vPosition, 0.0, 1.0);
+      }
+    )";
+  }
+  
+  const char* getFragmentShader() override {
+    return R"(#version 300 es
+      precision mediump float;
+      out vec4 fragColor;
+
+      void main() {
+        fragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red
+      }
+    )";
   }
 
-  // Square
-  const GLfloat squareVertices[8] = {
-     0.005f,  0.005f, // top right
-     0.005f, -0.005f, // bottom right
-    -0.005f, -0.005f, // bottom left
-    -0.005f,  0.005f  // top left
-  };
+  void setupProgram() override {
+    program = createProgram(getVertexShader(), getFragmentShader());
+    if (!program) {
+      return;
+    }
+
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ibo);
+
+    positionHandle = glGetAttribLocation(program, "vPosition");
+  }
 
   void setContours(std::vector<std::vector<cv::Point>> contours_) override {
     contours = contours_;
@@ -65,5 +86,15 @@ public:
   }
 
 private:
+  GLuint positionHandle;
+
   std::vector<std::vector<cv::Point>> contours;
+
+  // Square
+  const GLfloat squareVertices[8] = {
+     0.005f,  0.005f, // top right
+     0.005f, -0.005f, // bottom right
+    -0.005f, -0.005f, // bottom left
+    -0.005f,  0.005f  // top left
+  };
 };

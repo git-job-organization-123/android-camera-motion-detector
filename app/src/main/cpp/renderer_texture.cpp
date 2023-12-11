@@ -81,8 +81,8 @@ private:
   GLint textureHandle;
   GLuint texture;
 
-  const size_t textureVerticesSize = 4 * sizeof(GLfloat);
-  const size_t iboSize = 6 * sizeof(GLushort);
+  const GLint textureVerticesSize = 4 * sizeof(GLfloat);
+  const GLint iboSize = 6 * sizeof(GLushort);
 
   unsigned char* imageData;
 

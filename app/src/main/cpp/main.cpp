@@ -9,22 +9,12 @@
 
 using namespace cv;
 
-enum PreviewMode {
-  DETECT_PREVIEW_MOTION_WHITE,
-  DETECT_PREVIEW_MOTION_RED,
-  DETECT_PREVIEW_MOTION_GREEN,
-  DETECT_PREVIEW_MOTION_BLUE,
-  DETECT_PREVIEW_MOTION_GRAYSCALE,
-  DETECT_PREVIEW_MOTION_WHITE_WITH_BACKGROUND,
-  DETECT_MOTION_LINES,
-};
-
-PreviewMode previewMode;
-PreviewMode previousPreviewMode;
-
 int cameraWidth;
 int cameraHeight;
 
+#include "renderer.cpp"
+#include "renderer_red_lines.cpp"
+#include "renderer_texture.cpp"
 #include "detector.cpp"
 #include "detector_motion.cpp"
 #include "detector_motion_image.cpp"
@@ -36,17 +26,8 @@ int cameraHeight;
 #include "detector_motion_image_grayscale.cpp"
 #include "detector_motion_image_background.cpp"
 #include "detector_motion_red_lines.cpp"
-#include "renderer.cpp"
-#include "renderer_red_lines.cpp"
-#include "renderer_texture.cpp"
 
 bool initialized;
-
-// Shader program currently in use
-GLuint currentProgram;
-
-Detector *currentDetector = nullptr;
-Renderer *currentRenderer = nullptr;
 
 Detector_Motion_Image_Red *redMotionImageDetector;
 Detector_Motion_Image_Green *greenMotionImageDetector;
@@ -59,11 +40,22 @@ Detector_Motion_Red_Lines *redLinesMotionDetector;
 Renderer_Red_Lines *redLinesRenderer;
 Renderer_Texture *textureRenderer;
 
-void setupDefaults() {
-  // Default preview mode
-  previewMode = PreviewMode::DETECT_PREVIEW_MOTION_WHITE;
-  previousPreviewMode = previewMode;
-}
+struct PreviewMode {
+  Detector *detector;
+  Renderer *renderer;
+
+  PreviewMode(Detector *detector_, Renderer *renderer_) {
+    detector = detector_;
+    renderer = renderer_;
+  }
+};
+
+std::vector<PreviewMode*> previewModes;
+
+PreviewMode *currentPreviewMode;
+int currentPreviewModeIndex = 0;
+
+bool changeShaderProgramOnNextDraw = false;
 
 void setupDetectors() {
   redMotionImageDetector = new Detector_Motion_Image_Red();
@@ -75,101 +67,74 @@ void setupDetectors() {
   redLinesMotionDetector = new Detector_Motion_Red_Lines();
 }
 
-void setDetector(Detector *detector) {
-  currentDetector = detector;
-}
-
-void updateDetector() {
-  if (currentDetector != nullptr) {
-    currentDetector->clear();
-  }
-
-  switch (previewMode) {
-    case PreviewMode::DETECT_PREVIEW_MOTION_WHITE:
-      currentDetector = whiteMotionImageDetector;
-      break;
-    case PreviewMode::DETECT_PREVIEW_MOTION_RED:
-      currentDetector = redMotionImageDetector;
-      break;
-    case PreviewMode::DETECT_PREVIEW_MOTION_GREEN:
-      currentDetector = greenMotionImageDetector;
-      break;
-    case PreviewMode::DETECT_PREVIEW_MOTION_BLUE:
-      currentDetector = blueMotionImageDetector;
-      break;
-    case PreviewMode::DETECT_PREVIEW_MOTION_GRAYSCALE:
-      currentDetector = grayscaleMotionImageDetector;
-      break;
-    case PreviewMode::DETECT_PREVIEW_MOTION_WHITE_WITH_BACKGROUND:
-      currentDetector = backgroundMotionImageDetector;
-      break;
-    case PreviewMode::DETECT_MOTION_LINES:
-      currentDetector = redLinesMotionDetector;
-      break;
-  }
-}
-
 void setupRenderers() {
   redLinesRenderer = new Renderer_Red_Lines();
   textureRenderer = new Renderer_Texture();
 }
 
-void setRenderer(Renderer *renderer) {
-  currentRenderer = renderer;
+// Set up detector renderer pairs
+void setupPreviewModes() {
+  previewModes.push_back(new PreviewMode(whiteMotionImageDetector, textureRenderer));
+  previewModes.push_back(new PreviewMode(redMotionImageDetector, textureRenderer));
+  previewModes.push_back(new PreviewMode(greenMotionImageDetector, textureRenderer));
+  previewModes.push_back(new PreviewMode(blueMotionImageDetector, textureRenderer));
+  previewModes.push_back(new PreviewMode(grayscaleMotionImageDetector, textureRenderer));
+  previewModes.push_back(new PreviewMode(backgroundMotionImageDetector, textureRenderer));
+  previewModes.push_back(new PreviewMode(redLinesMotionDetector, redLinesRenderer));
 }
 
-void updateRenderer() {
-  if (previewMode == PreviewMode::DETECT_MOTION_LINES) {
-    setRenderer(redLinesRenderer);
+void selectPreviewModeAtIndex(const int index) {
+  if (currentPreviewMode != nullptr) {
+    currentPreviewMode->detector->clear();
+    currentPreviewMode->renderer->clear();
   }
-  else {
-    setRenderer(textureRenderer);
-  }
+
+  currentPreviewModeIndex = index;
+  currentPreviewMode = previewModes.at(currentPreviewModeIndex);
+
+  currentPreviewMode->detector->init();
+  currentPreviewMode->renderer->init();
+
+  // Change shader progran on next draw
+  changeShaderProgramOnNextDraw = true;
 }
 
-void updatePreviewMode() {
-  if (previewMode == previousPreviewMode) {
-    return;
-  }
-  
-  updateDetector();
-  updateRenderer();
+void selectNextPreviewMode() {
+  ++currentPreviewModeIndex;
 
-  previousPreviewMode = previewMode;
+  if (currentPreviewModeIndex >= previewModes.size()) {
+    // Select preview mode at start
+    currentPreviewModeIndex = 0;
+  }
+
+  selectPreviewModeAtIndex(currentPreviewModeIndex);
 }
 
 void setupGraphics(int width, int height) {
   textureRenderer->setupProgram();  
   redLinesRenderer->setupProgram();  
 
-  // Default program
-  glUseProgram(textureRenderer->program);
-  currentProgram = textureRenderer->program;
+  // Default shader program
+  glUseProgram(currentPreviewMode->renderer->program);
 
   glViewport(0, 0, width, height);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void detectFrame(unsigned char* nv21ImageData) {  
-  currentDetector->setImageData(nv21ImageData);
-  currentDetector->detect();
-  currentDetector->clearImage();
+  currentPreviewMode->detector->setImageData(nv21ImageData);
+  currentPreviewMode->detector->detect();
+  currentPreviewMode->detector->updateRendererData(currentPreviewMode->renderer);
+  currentPreviewMode->detector->clearImage();
 }
 
 void renderFrame() {
-  if (currentProgram != currentRenderer->program) {
-    glUseProgram(currentRenderer->program);
-    currentProgram = currentRenderer->program;
+  if (changeShaderProgramOnNextDraw) {
+    glUseProgram(currentPreviewMode->renderer->program);
+    changeShaderProgramOnNextDraw = false;
   }
 
-  if (previewMode == PreviewMode::DETECT_MOTION_LINES) { // Contours (points)
-    currentRenderer->setContours(currentDetector->contours);
-  }
-  else { // Image motion
-    currentRenderer->setImageData(currentDetector->processedImage.data);
-  }
-
-  currentRenderer->draw();
+  currentPreviewMode->renderer->draw();
 }
 
 extern "C" {
@@ -177,23 +142,22 @@ extern "C" {
   JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_setCameraSettings(JNIEnv* env, jobject obj, int32_t width, int32_t height);
   JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_draw(JNIEnv *env, jobject obj);
   JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_processImageBuffers(JNIEnv* env, jobject obj, jobject y, int ySize, int yPixelStride, int yRowStride, jobject u, int uSize, int uPixelStride, int uRowStride, jobject v, int vSize, int vPixelStride, int vRowStride);
-  JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_touch(JNIEnv *env, jobject obj, int previewMode);
+  JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_touch(JNIEnv *env, jobject obj);
 };
 
 JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_init(JNIEnv *env, jobject obj,  jint width, jint height) {
-  // Set up default preview mode
-  setupDefaults();
-
   // Set up renderer and detector classes
   setupRenderers();
   setupDetectors();
 
+  // Set up list of preview modes
+  setupPreviewModes();
+
+  // Select first preview mode
+  selectPreviewModeAtIndex(0);
+
   // Set up graphics
   setupGraphics(width, height);
-
-  // Select default detector and renderer
-  updateDetector();
-  updateRenderer();
 
   initialized = true;
 }
@@ -281,8 +245,6 @@ JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_processImageB
 }
 
 JNIEXPORT void JNICALL Java_com_app_motiondetector_MyGLSurfaceView_touch(JNIEnv* env,
-                                                                             jobject obj,
-                                                                             int previewMode_) {
-  previewMode = static_cast<PreviewMode>(previewMode_); // Set preview mode
-  updatePreviewMode();
+                                                                         jobject obj) {
+  selectNextPreviewMode();
 }

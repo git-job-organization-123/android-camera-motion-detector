@@ -5,6 +5,8 @@ public:
 
   std::vector<std::vector<cv::Point>> contours; // Points
 
+  virtual void init() {}
+
   virtual void setImageData(unsigned char* nv21ImageData) {
     // Create image
     currentImage.create(cameraHeight, cameraWidth, CV_8UC1);
@@ -17,6 +19,7 @@ public:
   }
 
   virtual void detect() {}
+  virtual void updateRendererData(Renderer *renderer) {}
 
   virtual void clear() {
     clearImage();

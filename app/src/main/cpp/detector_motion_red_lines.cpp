@@ -23,4 +23,9 @@ public:
     // Update the previous frame
     prevImage = currentImage;
   }
+
+  void updateRendererData(Renderer *renderer) override {
+    // Update renderer contours
+    renderer->setContours(contours);
+  }
 };

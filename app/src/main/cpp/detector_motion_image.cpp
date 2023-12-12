@@ -24,5 +24,10 @@ public:
     prevImage = currentImage;
   }
 
+  void updateRendererData(Renderer *renderer) override {
+    // Update renderer image
+    renderer->setImageData(processedImage.data);
+  }
+
   virtual void processImage(cv::Mat &image) {}
 };

@@ -33,18 +33,20 @@ public:
     positionHandle = glGetAttribLocation(program, "vPosition");
   }
 
+  void init() override {
+    vboData = new GLfloat[8192 * 8 * sizeof(GLfloat)];
+  }
+
   void setContours(std::vector<std::vector<cv::Point>> &contours_) override {
     contours = contours_;
   }
 
   void draw() override {
-    std::vector<GLfloat> vboDataVector;
-
     GLint numSquares = 0;
 
     for (const auto& contour : contours) {
       for (const auto& point : contour) {
-        if (numSquares > 100000) {
+        if (numSquares >= 8192) {
           // Prevent crash with limit
           continue;
         }
@@ -52,24 +54,25 @@ public:
         const GLfloat x = -(point.y / (cameraHeight * 0.5f)) + 1.0f;
         const GLfloat y = -(point.x / (cameraWidth * 0.5f)) + 1.0f;
 
-        vboDataVector.emplace_back(vertices[0] + x);
-        vboDataVector.emplace_back(vertices[1] + y);
-        vboDataVector.emplace_back(vertices[2] + x);
-        vboDataVector.emplace_back(vertices[3] + y);
-        vboDataVector.emplace_back(vertices[4] + x);
-        vboDataVector.emplace_back(vertices[5] + y);
-        vboDataVector.emplace_back(vertices[6] + x);
-        vboDataVector.emplace_back(vertices[7] + y);
+        const GLint vboPosition = numSquares * 8;
+        vboData[vboPosition] =     vertices[0] + x;
+        vboData[vboPosition + 1] = vertices[1] + y;
+        vboData[vboPosition + 2] = vertices[2] + x;
+        vboData[vboPosition + 3] = vertices[3] + y;
+        vboData[vboPosition + 4] = vertices[4] + x;
+        vboData[vboPosition + 5] = vertices[5] + y;
+        vboData[vboPosition + 6] = vertices[6] + x;
+        vboData[vboPosition + 7] = vertices[7] + y;
 
         ++numSquares;
       }
     }
 
-    const GLint vboSize = vboDataVector.size() * sizeof(GLfloat);
+    const GLint vboSize = numSquares * 8 * sizeof(GLfloat);
 
     // VBO
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, vboSize, vboDataVector.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vboSize, vboData, GL_DYNAMIC_DRAW);
 
     // Set up the vertex attribute pointers
     glVertexAttribPointer(positionHandle, 2, GL_FLOAT, GL_FALSE, 0, 0);
@@ -85,6 +88,10 @@ public:
     glDeleteBuffers(1, &vbo);
   }
 
+  void clear() override {
+    delete[] vboData;
+  }
+
 private:
   GLuint positionHandle;
 
@@ -97,4 +104,6 @@ private:
     -0.005f, -0.005f, // bottom left
     -0.005f,  0.005f  // top left
   };
+
+  GLfloat *vboData;
 };

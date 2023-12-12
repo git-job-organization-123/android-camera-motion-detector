@@ -122,6 +122,10 @@ void setupGraphics(int width, int height) {
 }
 
 void detectFrame(unsigned char* nv21ImageData) {  
+  if (changeShaderProgramOnNextDraw) {
+    return; // Prevent crash
+  }
+
   currentPreviewMode->detector->setImageData(nv21ImageData);
   currentPreviewMode->detector->detect();
   currentPreviewMode->detector->updateRendererData(currentPreviewMode->renderer);
@@ -132,6 +136,7 @@ void renderFrame() {
   if (changeShaderProgramOnNextDraw) {
     glUseProgram(currentPreviewMode->renderer->program);
     changeShaderProgramOnNextDraw = false;
+    return; // Prevent crash
   }
 
   currentPreviewMode->renderer->draw();

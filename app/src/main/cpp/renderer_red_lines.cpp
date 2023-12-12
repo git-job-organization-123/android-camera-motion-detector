@@ -34,7 +34,7 @@ public:
   }
 
   void init() override {
-    vboData = new GLfloat[8192 * 8 * sizeof(GLfloat)];
+    vboData = new GLfloat[16384 * 8 * sizeof(GLfloat)];
   }
 
   void setContours(std::vector<std::vector<cv::Point>> &contours_) override {
@@ -46,7 +46,7 @@ public:
 
     for (const auto& contour : contours) {
       for (const auto& point : contour) {
-        if (numSquares >= 8192) {
+        if (numSquares >= 16384) {
           // Prevent crash with limit
           continue;
         }

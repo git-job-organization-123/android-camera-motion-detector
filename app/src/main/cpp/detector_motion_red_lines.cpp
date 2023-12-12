@@ -24,7 +24,7 @@ public:
     prevImage = currentImage;
   }
 
-  void updateRendererData(Renderer *renderer) override {
+  void updateRendererData() override {
     // Update renderer contours
     renderer->setContours(contours);
   }

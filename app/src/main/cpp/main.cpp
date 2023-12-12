@@ -47,6 +47,7 @@ struct PreviewMode {
   PreviewMode(Detector *detector_, Renderer *renderer_) {
     detector = detector_;
     renderer = renderer_;
+    detector_->setRenderer(renderer_);
   }
 };
 
@@ -128,7 +129,7 @@ void detectFrame(unsigned char* nv21ImageData) {
 
   currentPreviewMode->detector->setImageData(nv21ImageData);
   currentPreviewMode->detector->detect();
-  currentPreviewMode->detector->updateRendererData(currentPreviewMode->renderer);
+  currentPreviewMode->detector->updateRendererData();
   currentPreviewMode->detector->clearImage();
 }
 

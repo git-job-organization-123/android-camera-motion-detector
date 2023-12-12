@@ -19,7 +19,12 @@ public:
   }
 
   virtual void detect() {}
-  virtual void updateRendererData(Renderer *renderer) {}
+
+  void setRenderer(Renderer *renderer_) {
+    renderer = renderer_;
+  }
+
+  virtual void updateRendererData() {}
 
   virtual void clear() {
     // clearImage();
@@ -33,4 +38,7 @@ public:
   void clearProcessedImage() {
     processedImage.release();
   }
+
+protected:
+  Renderer *renderer;
 };

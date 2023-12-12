@@ -22,7 +22,7 @@ public:
   virtual void updateRendererData(Renderer *renderer) {}
 
   virtual void clear() {
-    clearImage();
+    // clearImage();
     clearProcessedImage();
   }
 

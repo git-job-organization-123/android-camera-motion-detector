@@ -15,6 +15,7 @@ int cameraHeight;
 #include "renderer.cpp"
 #include "renderer_red_lines.cpp"
 #include "renderer_texture.cpp"
+#include "renderer_red_chart.cpp"
 #include "detector.cpp"
 #include "detector_motion.cpp"
 #include "detector_motion_image.cpp"
@@ -36,9 +37,11 @@ Detector_Motion_Image_White *whiteMotionImageDetector;
 Detector_Motion_Image_Grayscale *grayscaleMotionImageDetector;
 Detector_Motion_Image_Background *backgroundMotionImageDetector;
 Detector_Motion_Red_Lines *redLinesMotionDetector;
+Detector_Motion_Red_Lines *redChartMotionDetector;
 
 Renderer_Red_Lines *redLinesRenderer;
 Renderer_Texture *textureRenderer;
+Renderer_Red_Chart *redChartRenderer;
 
 struct PreviewMode {
   Detector *detector;
@@ -66,11 +69,13 @@ void setupDetectors() {
   grayscaleMotionImageDetector = new Detector_Motion_Image_Grayscale();
   backgroundMotionImageDetector = new Detector_Motion_Image_Background();
   redLinesMotionDetector = new Detector_Motion_Red_Lines();
+  redChartMotionDetector = new Detector_Motion_Red_Lines();
 }
 
 void setupRenderers() {
   redLinesRenderer = new Renderer_Red_Lines();
   textureRenderer = new Renderer_Texture();
+  redChartRenderer = new Renderer_Red_Chart();
 }
 
 // Set up detector renderer pairs
@@ -82,6 +87,7 @@ void setupPreviewModes() {
   previewModes.push_back(new PreviewMode(grayscaleMotionImageDetector, textureRenderer));
   previewModes.push_back(new PreviewMode(backgroundMotionImageDetector, textureRenderer));
   previewModes.push_back(new PreviewMode(redLinesMotionDetector, redLinesRenderer));
+  previewModes.push_back(new PreviewMode(redChartMotionDetector, redChartRenderer));
 }
 
 void selectPreviewModeAtIndex(const int index) {
@@ -114,6 +120,7 @@ void selectNextPreviewMode() {
 void setupGraphics(int width, int height) {
   textureRenderer->setupProgram();  
   redLinesRenderer->setupProgram();  
+  redChartRenderer->setupProgram();  
 
   // Default shader program
   glUseProgram(currentPreviewMode->renderer->program);

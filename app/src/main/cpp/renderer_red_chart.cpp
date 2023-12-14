@@ -44,25 +44,19 @@ public:
   void draw() override {
     GLint motion = 0;
 
-    // Get amout of motion
+    // Get amount of motion
     for (const auto& contour : contours) {
       motion += contour.size();
     }
 
-    // Calculate motion line height
-    const GLfloat motionYHeight = (GLfloat)motion * 0.00004f;
+    // Calculate motion threshold
+    const GLfloat motionThreshold = (GLfloat)motion * 0.00004f;
 
     // Add chart line
-    addChartLine(motionYHeight);
+    addChartLine(motionThreshold);
 
     // Set next chart line X
     chartLineX += chartSpeedX;
-
-    // 1024 lines per buffer
-    if (numChartLines > 1024) {
-      // Remove chart lines
-      numChartLines = 0;
-    }
 
     // Check if chart has reached right side of screen
     if (chartLineX > 2.0f) {
@@ -94,14 +88,13 @@ public:
   }
 
   void addChartLine(const GLfloat chartLineY) {
-    if (numChartLines == 0) {
-      vboData[numChartLines * 4 + 0] = chartLineX - 1.0f; // X start
-      vboData[numChartLines * 4 + 1] = chartLineY - 0.5f; // Y start
-    }
-    else { // Connect lines
-      vboData[numChartLines * 4 + 0] = oldChartLineX; // X start
-      vboData[numChartLines * 4 + 1] = oldChartLineY; // Y start
-    }
+    // X start
+    vboData[numChartLines * 4 + 0] = numChartLines == 0 ? chartLineX - 1.0f // First line point X
+                                                        : oldChartLineX;    // Connect previous and next line X
+    
+    // Y start
+    vboData[numChartLines * 4 + 1] = numChartLines == 0 ? chartLineY - 0.5f // First line point Y
+                                                        : oldChartLineY;    // Connect previous and next line Y
 
     oldChartLineX = chartLineX - 1.0f;
     oldChartLineY = chartLineY - 0.5f;

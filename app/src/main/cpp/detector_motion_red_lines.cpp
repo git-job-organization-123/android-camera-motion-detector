@@ -15,7 +15,7 @@ public:
     cv::absdiff(frame2, frame1, diff);
 
     // Motion threshold  
-    cv::threshold(diff, diff, 50, 255, THRESH_BINARY);
+    cv::threshold(diff, diff, 35, 255, THRESH_BINARY);
 
     // Find contours in the difference image
     cv::findContours(diff, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
